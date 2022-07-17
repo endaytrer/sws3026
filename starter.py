@@ -4,22 +4,33 @@ import dlib
 import numpy as np
 from skimage.feature import hog
 import sklearn
+from matplotlib import pyplot as plt
 
 # T1  start _______________________________________________________________________________
 # Read in Dataset
 
 # change the dataset path here according to your folder structure
-dataset_path = "D:\\Code_uc\\face_reco\\Dataset_1"
+dataset_path = "Dataset_1"
 
 X = []
 y = []
-for subject_name in os.listdir(dataset_path):
+
+# naming of subjects
+subject_prefix = "s"
+subject_range = (1, 51)
+
+for subject_index in range(*subject_range):
+
+    subject_name = f"{subject_prefix}{subject_index // 10}{subject_index % 10}"
+
     y.append(subject_name)
-    subject_images_dir = os.path.join(dataset_path, subject_name)
+    subject_images_dir = f"{dataset_path}/{subject_name}"
 
     temp_x_list = []
     for img_name in os.listdir(subject_images_dir):
         # write code to read each 'img'
+        if not img_name.endswith('.jpg'):
+            continue
         img_path = os.path.join(subject_images_dir, img_name)
         img = dlib.load_rgb_image(img_path)
         # add the img to temp_x_list
@@ -32,9 +43,9 @@ for subject_name in os.listdir(dataset_path):
 # Preprocessing
 X_processed = []
 detector = dlib.get_frontal_face_detector()
-predictor_path = "D:\\Code_uc\\face_reco\\shape_predictor_68_face_landmarks.dat"
+predictor_path = "shape_predictor_68_face_landmarks.dat"
 predictor = dlib.shape_predictor(predictor_path)
-nomask_data_path = "D:\\Code_uc\\face_reco\\dataset_nomask"
+nomask_data_path = "output/dataset_nomask"
 for i, x_list in enumerate(X):
     temp_X_processed = []
     dir_path = os.path.join(nomask_data_path, f"s{i}")
@@ -44,8 +55,8 @@ for i, x_list in enumerate(X):
         detector = dlib.get_frontal_face_detector()
         dets = detector(x, 2)
         det = dets[0]
-        x = dlib.as_grayscale(x)
-        shape = predictor(x, det)
+        x_gray = dlib.as_grayscale(x)
+        shape = predictor(x_gray, det)
         # write the code to crop the image (x) to keep only the face, resize the cropped image to 150x150
         temp_points = shape.parts()
         points = np.ndarray(shape=(0, 2), dtype=np.uint8)
@@ -56,7 +67,7 @@ for i, x_list in enumerate(X):
         top, bottom = np.min(y_axis), np.max(y_axis)
         crp_x = x[top-5:bottom+5, left-5:right+5]
         crp_x = dlib.resize_image(crp_x, 150, 150)
-        cv.imwrite(os.path.join(dir_path, f"{j}.jpg"), crp_x)
+        plt.imsave(os.path.join(dir_path, f"{j}.jpg"), crp_x)
         # append the converted image into temp_X_processed
         temp_X_processed.append(crp_x)
 
@@ -70,7 +81,7 @@ for i, x_list in enumerate(X):
 # Create masked face dataset
 X_masked = []
 shp_det = dlib.rectangle(0, 0, 149, 149)
-nomask_data_path = "D:\\Code_uc\\face_reco\\dataset_mask"
+nomask_data_path = "output/dataset_mask"
 
 for i, x_list in enumerate(X_processed):
     temp_X_masked = []
@@ -80,16 +91,15 @@ for i, x_list in enumerate(X_processed):
         # write the code to detect face in the image (x) using dlib facedetection library
         local_shape = predictor(x, shp_det)
         key_points = local_shape.parts()
-        temp_points = key_points[2:15]
-        temp_points.extend([key_points[31], key_points[35], key_points[27]])
+        temp_points = key_points[1:16]
+        temp_points.extend([key_points[35], key_points[28], key_points[31]])
         mask_points = np.ndarray(shape=(0, 2), dtype=np.uint8)
         for p in temp_points:
             mask_points = np.vstack([mask_points, [p.x, p.y]])
         # write the code to add synthetic mask as shown in the project problem description
-        cv.fillPoly(x, [mask_points[:-1]], color=255)
-        cv.fillPoly(x, [mask_points[-3:]], color=255)
+        cv.fillPoly(x, [mask_points], color=(255, 255, 255))
         # append the converted image into temp_X_masked
-        cv.imwrite(os.path.join(dir_path, f"{j}.jpg"), x)
+        plt.imsave(os.path.join(dir_path, f"{j}.jpg"), x)
         temp_X_masked.append(x)
     # append temp_X_masked into  X_masked
     X_masked.append(temp_X_masked)

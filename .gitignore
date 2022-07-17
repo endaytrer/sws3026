@@ -1,2 +1,7 @@
 *.jpg
 *.dat
+Dataset_1/**
+output/*/**
+.idea
+.vscode
+**/.DS_Store
