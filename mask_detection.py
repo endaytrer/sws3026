@@ -5,8 +5,8 @@ from sklearn.preprocessing import normalize, StandardScaler
 from sklearn.svm import *
 from sklearn.model_selection import train_test_split
 
-nomask_path = "D:\\Code_uc\\face_reco\\dataset_nomask"
-mask_path = "D:\\Code_uc\\face_reco\\dataset_mask"
+nomask_path = "output/dataset_nomask"
+mask_path = "output/dataset_mask"
 
 # read the original data with and without mask & create labels
 print("reading faces without masks")
