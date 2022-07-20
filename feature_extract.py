@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 data_path = "output/dataset_nomask"
-num_features = 50
+num_features = 30
 
 
 def pca(x):
@@ -60,4 +60,3 @@ if __name__ == "__main__":
     svm.fit(x_train, y_train)
     y_pred = svm.predict(x_test)
     print(accuracy_score(y_test, y_pred))
-

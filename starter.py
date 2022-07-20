@@ -41,15 +41,17 @@ for subject_index in range(*subject_range):
 
 # T2 start __________________________________________________________________________________
 # Preprocessing
+
 X_processed = []
 detector = dlib.get_frontal_face_detector()
 predictor_path = "shape_predictor_68_face_landmarks.dat"
 predictor = dlib.shape_predictor(predictor_path)
-nomask_data_path = "output/dataset_nomask"
+nomask_data_dir = "output/dataset_nomask"
+
 for i, x_list in enumerate(X):
     temp_X_processed = []
-    dir_path = os.path.join(nomask_data_path, f"s{i}")
-    os.makedirs(dir_path)
+    nomask_path = os.path.join(nomask_data_dir, f"s{i}")
+    os.makedirs(nomask_path)
     for j, x in enumerate(x_list):
         # write the code to detect face in the image (x) using dlib facedetection library
         detector = dlib.get_frontal_face_detector()
@@ -58,20 +60,44 @@ for i, x_list in enumerate(X):
         x_gray = dlib.as_grayscale(x)
         shape = predictor(x_gray, det)
         # write the code to crop the image (x) to keep only the face, resize the cropped image to 150x150
-        temp_points = shape.parts()
-        points = np.ndarray(shape=(0, 2), dtype=np.uint8)
+        temp_points = np.array(shape.parts())
+        points: np.ndarray = np.ndarray(shape=(0, 2), dtype=np.uint8)
         for p in temp_points:
             points = np.vstack([points, [p.x, p.y]])
         x_axis, y_axis = points[:, 0], points[:, 1]
+
+        # rotate face by feature points
+        # the feature point chosen are No.8 (the mid point of jaw line) and No.27 (the top point of nose)
+        center = (points[27] + points[8]) / 2
+        orient_vec: np.ndarray = points[27] - points[8]
+        angle = np.sign(orient_vec[0]) * np.arccos(-orient_vec[1] /
+                                                   np.linalg.norm(orient_vec))
+        # perform transform
+        rotation_matrix = cv.getRotationMatrix2D(
+            center=center, angle=angle * 180 / np.pi, scale=1)
+        x = cv.warpAffine(
+            src=x, M=rotation_matrix, dsize=(x.shape[1], x.shape[0]))
+        points = np.vstack([points.T, [1] * points.shape[0]])
+        points = (rotation_matrix @ points).T
+
+        # Cut the image to square to avoid distortion
+        x_axis, y_axis = points[:, 0], points[:, 1]
         left, right = np.min(x_axis), np.max(x_axis)
         top, bottom = np.min(y_axis), np.max(y_axis)
-        crp_x = x[top-5:bottom+5, left-5:right+5]
-        crp_x = dlib.resize_image(crp_x, 150, 150)
-        plt.imsave(os.path.join(dir_path, f"{j}.jpg"), crp_x)
-        # append the converted image into temp_X_processed
-        temp_X_processed.append(crp_x)
+        w, h = right - left, bottom - top
+        if w > h:
+            top -= (w - h) / 2
+            bottom += (w - h) / 2
+        else:
+            left -= (h - w) / 2
+            right += (h - w) / 2
+        margin_ratio = 0.05  # keep margin or not
+        resized_x = x[int(top - margin_ratio * w):int(bottom + margin_ratio * w),
+                      int(left - margin_ratio * w):int(right + margin_ratio * w)]
+        resized_x = dlib.resize_image(resized_x, 150, 150)
+        plt.imsave(os.path.join(nomask_path, f"{j}.jpg"), resized_x)
 
-    # append temp_X_processed into  X_processed
+        temp_X_processed.append(resized_x)
     X_processed.append(temp_X_processed)
 
 # T2 end ____________________________________________________________________________________
@@ -81,12 +107,12 @@ for i, x_list in enumerate(X):
 # Create masked face dataset
 X_masked = []
 shp_det = dlib.rectangle(0, 0, 149, 149)
-nomask_data_path = "output/dataset_mask"
+mask_data_path = "output/dataset_mask"
 
 for i, x_list in enumerate(X_processed):
     temp_X_masked = []
-    dir_path = os.path.join(nomask_data_path, f"s{i}")
-    os.makedirs(dir_path)
+    mask_path = os.path.join(mask_data_path, f"s{i}")
+    os.makedirs(mask_path)
     for j, x in enumerate(x_list):
         # write the code to detect face in the image (x) using dlib facedetection library
         local_shape = predictor(x, shp_det)
@@ -99,7 +125,7 @@ for i, x_list in enumerate(X_processed):
         # write the code to add synthetic mask as shown in the project problem description
         cv.fillPoly(x, [mask_points], color=(255, 255, 255))
         # append the converted image into temp_X_masked
-        plt.imsave(os.path.join(dir_path, f"{j}.jpg"), x)
+        plt.imsave(os.path.join(mask_path, f"{j}.jpg"), x)
         temp_X_masked.append(x)
     # append temp_X_masked into  X_masked
     X_masked.append(temp_X_masked)
