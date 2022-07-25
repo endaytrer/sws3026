@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 data_path = "output/dataset_mask"
-num_features = 30
+num_features = 70
 
 
 def pca(x):
@@ -27,9 +27,9 @@ if __name__ == "__main__":
             img = plt.imread(filepath)
             x.append(img)
             y.append(i)
-    x, y = np.mean(np.array(x), axis=3), np.array(y)
-    dimensions, width, height = x.shape
-    x = x.reshape((dimensions, width * height))
+    x, y = np.array(x), np.array(y)
+    dimensions, width, height, channels = x.shape
+    x = x.reshape((dimensions, width * height * channels))
 
     # do SVD decomposition of image idx
     idx = 2

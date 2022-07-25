@@ -10,11 +10,11 @@ class Preprocessor:
 
     def preprocess(self, imgs: list[np.ndarray]):
         ans = []
-        for x in imgs:
+        for i, x in enumerate(imgs):
             dets = self.detector(x, 2)
             det = dets[0]
-            x = dlib.as_grayscale(x)
-            shape = self.predictor(x, det)
+            x_gray = dlib.as_grayscale(x)
+            shape = self.predictor(x_gray, det)
             # write the code to crop the image (x) to keep only the face, resize the cropped image to 150x150
             temp_points = np.array(shape.parts())
             points: np.ndarray = np.ndarray(shape=(0, 2), dtype=np.uint8)
@@ -52,4 +52,5 @@ class Preprocessor:
                           int(left - margin_ratio * w):int(right + margin_ratio * w)]
             resized_x = dlib.resize_image(resized_x, 150, 150)
             ans.append(resized_x)
+            print(f'{i + 1} / {len(imgs)} preprocessed')
         return np.array(ans)
